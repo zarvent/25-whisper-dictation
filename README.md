@@ -1,5 +1,6 @@
-# 🗣️ HERRAMIENTA DE DICTADO POR VOZ 
-https://github.com/user-attachments/assets/e1b8a747-61fc-4afc-bd48-0db9f0774eaf
+# 🗣️ HERRAMIENTA DE DICTADO POR VOZ
+
+<https://github.com/user-attachments/assets/e1b8a747-61fc-4afc-bd48-0db9f0774eaf>
 
 ---
 
@@ -42,17 +43,13 @@ para interactuar con el sistema utilizas un único atajo de teclado:
 
 > antes de usarlo por primera vez el script `verify-setup` te ayuda a diagnosticar el sistema.
 
-
-
-
-
 - revisa que todas las dependencias como **ffmpeg**, **CUDA** y **xclip** estén instaladas.
 - así puedes asegurar que el entorno está configurado correctamente para su operación.
 
 ---
 
+<https://github.com/user-attachments/assets/5bcadcfa-14f9-42a1-b3fc-dec93aa01996>
 
-https://github.com/user-attachments/assets/5bcadcfa-14f9-42a1-b3fc-dec93aa01996
+---
 
-
-
+nota: para más detalles ampliados de la nueva actualización consulta [archives/2025-11-15 nueva feature](archives/2025-11-15%20nueva%20feature.md).
