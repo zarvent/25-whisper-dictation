@@ -5,3 +5,4 @@ __pycache__/
 # Environment variable files - do NOT commit
 .env
 .env.*
+logs/*.log
