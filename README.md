@@ -21,11 +21,12 @@ la interacción se divide en dos funciones principales. ambas están pensadas pa
 este es el flujo principal: capturar tu voz y convertirla en texto. está activado por `scripts/whisper-toggle.sh`.
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false}} }%%
 flowchart TD
-    A[⏺️ atajo (ej. ctrl+mayús+espacio)] --> B(inicia grabación 🎤);
-    B --> C[⏹️ atajo (mismo)];
-    C --> D{transcribe con Whisper};
-    D --> E[📋 copiado al portapapeles];
+    A["⏺️ atajo (ej. ctrl+mayús+espacio)"] --> B("inicia grabación 🎤")
+    B --> C["⏹️ atajo (mismo)"]
+    C --> D{"transcribe con Whisper"}
+    D --> E["📋 copiado al portapapeles"]
 ```
 
 **2. flujo de refinado (texto → texto mejorado)**
@@ -33,10 +34,11 @@ flowchart TD
 a veces la transcripción no es perfecta. este flujo toma el texto de tu portapapeles y usa un LLM para limpiarlo, corregirlo o formatearlo. está activado por `scripts/process-clipboard.sh`.
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false}} }%%
 flowchart TD
-    A[📋 copias texto] --> B(🧠 atajo secundario);
-    B --> C{procesa con LLM (Gemini)};
-    C --> D[📋 reemplaza portapapeles];
+    A["📋 copias texto"] --> B("🧠 atajo secundario")
+    B --> C{"procesa con LLM (Gemini)"}
+    C --> D["📋 reemplaza portapapeles"]
 ```
 
 ---
