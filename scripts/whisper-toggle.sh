@@ -10,7 +10,7 @@ MAIN_SCRIPT="${PROJECT_DIR}/src/whisper_dictation/main.py"
 RECORDING_FLAG="/tmp/whisper_recording.pid"
 
 # --- Función Principal ---
-run_orchestrator() {
+run_client() {
     local command=$1
 
     if [ ! -f "${VENV_PATH}/bin/activate" ]; then
@@ -24,7 +24,7 @@ run_orchestrator() {
 
 # --- Lógica de Conmutación ---
 if [ -f "${RECORDING_FLAG}" ]; then
-    run_orchestrator "STOP_RECORDING"
+    run_client "STOP_RECORDING"
 else
-    run_orchestrator "START_RECORDING"
+    run_client "START_RECORDING"
 fi
