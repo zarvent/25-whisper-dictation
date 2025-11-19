@@ -5,8 +5,8 @@ log_file = "/tmp/whisper_debug.log"
 venv_path = "~/whisper-dictation/venv"
 
 [whisper]
-model = "distil-large-v3"
-language = "es"
+model = "large-v3-turbo"
+language = "auto"
 device = "cuda"
 compute_type = "float16"
 device_index = 0
@@ -14,12 +14,12 @@ num_workers = 4
 beam_size = 5
 best_of = 5
 temperature = 0.0
-vad_filter = false  # Desactivado temporalmente para pruebas
+vad_filter = true  # Recomendado activarlo para producción
 
 [whisper.vad_parameters]
-threshold = 0.3  # Más sensible para no cortar la voz
+threshold = 0.5
 min_speech_duration_ms = 250
-min_silence_duration_ms = 500
+min_silence_duration_ms = 100
 
 [gemini]
 model = "models/gemini-1.5-flash-latest"

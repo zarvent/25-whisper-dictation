@@ -116,16 +116,33 @@ class WhisperTranscriptionService(TranscriptionService):
         logger.info("transcribiendo audio...")
         whisper_config = config.whisper
 
+        # 1. Lógica para Auto-Detección
+        lang = whisper_config.language
+        if lang == "auto":
+            lang = None  # None activa la detección automática en faster-whisper
+
+        # 2. Prompt Inicial (Optimización Bilingüe)
+        # Esto le dice al modelo: "Oye, el audio será en Español o Inglés".
+        # Ayuda mucho con audios cortos que podrían confundirse.
+        bilingual_prompt = "Esta es una transcripción en Español. This is also in English."
+
         # faster-whisper acepta numpy array directamente
-        segments, _ = self.model.transcribe(
+        segments, info = self.model.transcribe(
             audio_data,
-            language=whisper_config.language,
+            language=lang,
+            task="transcribe",  # <--- Bloquea la traducción
+            initial_prompt=bilingual_prompt,  # <--- Inyección de contexto
             beam_size=whisper_config.beam_size,
             best_of=whisper_config.best_of,
             temperature=whisper_config.temperature,
             vad_filter=whisper_config.vad_filter,
             vad_parameters=whisper_config.vad_parameters.model_dump()
         )
+
+        # Si es detección automática, podemos loguear qué idioma detectó
+        if lang is None:
+            logger.info(f"Idioma detectado: {info.language} (prob: {info.language_probability:.2f})")
+
         text = " ".join([segment.text.strip() for segment in segments])
         logger.info("transcripción completada")
 
