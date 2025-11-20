@@ -68,6 +68,13 @@ def install_service():
     else:
         print("⚠️  Instalando sin soporte explícito de librerías CUDA (podría fallar si usas GPU)")
 
+    # Detección agresiva de DISPLAY para hardcodearlo en el servicio
+    display_val = os.environ.get("DISPLAY", ":0") # Default a :0 si no se detecta
+    xauth_val = os.environ.get("XAUTHORITY", f"{USER_HOME}/.Xauthority")
+
+    env_vars += f"Environment=DISPLAY={display_val}\n"
+    env_vars += f"Environment=XAUTHORITY={xauth_val}\n" # Necesario para xclip/x11 a veces
+
     # 4. Contenido del servicio
     service_content = f"""[Unit]
 Description=Voice2Machine Daemon
