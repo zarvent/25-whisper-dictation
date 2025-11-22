@@ -43,3 +43,4 @@ silero-vad
 pytest
 pytest-asyncio
 pytest-mock
+PySide6

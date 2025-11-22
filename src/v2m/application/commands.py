@@ -40,3 +40,9 @@ class ProcessTextCommand(Command):
             text (str): el texto que será enviado al servicio de LLM para su refinamiento
         """
         self.text = text
+
+class SmartCaptureCommand(Command):
+    """
+    comando para iniciar una captura inteligente (VAD)
+    """
+    pass

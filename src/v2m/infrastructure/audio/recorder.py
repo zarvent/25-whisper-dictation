@@ -3,7 +3,7 @@ import numpy as np
 import threading
 import wave
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Callable
 from v2m.core.logging import logger
 from v2m.domain.errors import RecordingError
 
@@ -19,7 +19,7 @@ class AudioRecorder:
         self.max_samples = 10 * 60 * sample_rate
         self.current_samples = 0
 
-    def start(self):
+    def start(self, chunk_callback: Optional[Callable[[np.ndarray], None]] = None):
         if self._recording:
             raise RecordingError("grabación ya en progreso")
 
@@ -35,6 +35,12 @@ class AudioRecorder:
                     if self.current_samples < self.max_samples:
                         self._frames.append(indata.copy())
                         self.current_samples += frames
+
+                        if chunk_callback:
+                            try:
+                                chunk_callback(indata)
+                            except Exception as e:
+                                logger.error(f"Error in chunk callback: {e}")
                     else:
                         # detener la grabación si se alcanza la duración máxima (o simplemente dejar de añadir)
                         pass

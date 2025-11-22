@@ -1,31 +1,32 @@
 #!/bin/bash
 
-# --- Configuración ---
+# Script actualizado para usar el nuevo SDK JSON-RPC
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_DIR="$( dirname "${SCRIPT_DIR}" )"
 
-# --- Rutas Derivadas ---
 VENV_PATH="${PROJECT_DIR}/venv"
-MAIN_SCRIPT="${PROJECT_DIR}/src/v2m/main.py"
-RECORDING_FLAG="/tmp/v2m_recording.pid"
+PYTHON="${VENV_PATH}/bin/python"
 
-# --- Función Principal ---
-run_client() {
-    local command=$1
-
-    if [ ! -f "${VENV_PATH}/bin/activate" ]; then
-        notify-send "❌ Error de V2M" "Entorno virtual no encontrado en ${VENV_PATH}"
-        exit 1
-    fi
-
-    source "${VENV_PATH}/bin/activate"
-    export PYTHONPATH="${PROJECT_DIR}/src"
-    python3 "${MAIN_SCRIPT}" "${command}"
-}
-
-# --- Lógica de Conmutación ---
-if [ -f "${RECORDING_FLAG}" ]; then
-    run_client "STOP_RECORDING"
-else
-    run_client "START_RECORDING"
+# Activar venv y exportar PYTHONPATH
+if [ ! -f "${VENV_PATH}/bin/activate" ]; then
+    notify-send "❌ Error de V2M" "Entorno virtual no encontrado"
+    exit 1
 fi
+
+source "${VENV_PATH}/bin/activate"
+export PYTHONPATH="${PROJECT_DIR}/src"
+
+# Usar el nuevo SDK para smart_capture
+${PYTHON} -c "
+import asyncio
+from v2m.sdk import V2MClient
+
+async def smart_capture():
+    client = V2MClient()
+    await client.connect()
+    result = await client.transcribe(use_llm=True)
+    print(f\"Transcription: {result.get('text', '')}\")
+
+asyncio.run(smart_capture())
+"

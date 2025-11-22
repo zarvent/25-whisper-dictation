@@ -15,6 +15,7 @@ class VADService:
         self.model = None
         self.utils = None
         self.get_speech_timestamps = None
+        self.VADIterator = None
         self.disabled = False  # si falla la carga, saltar VAD
 
     def load_model(self, timeout_sec: float = 10.0):
@@ -59,8 +60,18 @@ class VADService:
             logger.error(f"error al cargar silero vad {exc_holder[0]}")
             raise exc_holder[0]
 
-        (self.get_speech_timestamps, _, _, _, _) = self.utils
+        (self.get_speech_timestamps, _, _, self.VADIterator, _) = self.utils
         logger.info("modelo silero vad cargado")
+
+    def create_iterator(self, threshold: float = 0.5, sampling_rate: int = 16000, min_silence_duration_ms: int = 100):
+        """
+        crea un iterador de VAD para procesamiento por streaming
+        """
+        self.load_model()
+        if self.disabled or self.VADIterator is None:
+            return None
+
+        return self.VADIterator(self.model, threshold=threshold, sampling_rate=sampling_rate, min_silence_duration_ms=min_silence_duration_ms)
 
     def process(self, audio: np.ndarray, sample_rate: int = 16000) -> np.ndarray:
         """

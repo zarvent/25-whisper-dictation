@@ -16,6 +16,9 @@ from v2m.domain.errors import RecordingError
 from v2m.core.logging import logger
 from v2m.infrastructure.audio.recorder import AudioRecorder
 from v2m.infrastructure.vad_service import VADService
+import threading
+import time
+import numpy as np
 
 class WhisperTranscriptionService(TranscriptionService):
     """
@@ -167,3 +170,82 @@ class WhisperTranscriptionService(TranscriptionService):
         logger.info("transcripción completada")
 
         return text
+
+    def smart_capture(self, timeout: float = 10.0) -> str:
+        """
+        inicia una grabación inteligente que se detiene automáticamente al detectar silencio
+
+        flujo:
+        1. inicia grabación
+        2. monitorea audio con VAD
+        3. si detecta voz, espera a que termine (silencio > 600ms)
+        4. si no detecta voz en `timeout` segundos, aborta
+        5. detiene y transcribe
+        """
+        if not self.vad_service:
+            logger.warning("Smart capture solicitado pero VAD no está disponible. Usando grabación normal de 5s.")
+            self.start_recording()
+            time.sleep(5)
+            return self.stop_and_transcribe()
+
+        iterator = self.vad_service.create_iterator(min_silence_duration_ms=600)
+        if not iterator:
+            logger.warning("No se pudo crear iterador VAD. Fallback a grabación fija.")
+            self.start_recording()
+            time.sleep(5)
+            return self.stop_and_transcribe()
+
+        stop_event = threading.Event()
+        speech_started = False
+        buffer = np.array([], dtype=np.float32)
+
+        def vad_callback(chunk: np.ndarray):
+            nonlocal speech_started, buffer
+
+            # Acumular buffer
+            buffer = np.concatenate((buffer, chunk))
+
+            # Silero VAD soporta 512, 1024, 1536 samples para 16k
+            window_size_samples = 512
+
+            while len(buffer) >= window_size_samples:
+                process_chunk = buffer[:window_size_samples]
+                buffer = buffer[window_size_samples:]
+
+                try:
+                    speech_dict = iterator(torch.from_numpy(process_chunk), return_seconds=True)
+                    if speech_dict:
+                        if 'start' in speech_dict:
+                            speech_started = True
+                            logger.debug("VAD: Voz detectada")
+                        if 'end' in speech_dict:
+                            logger.debug("VAD: Silencio detectado, deteniendo...")
+                            stop_event.set()
+                except Exception as e:
+                    logger.error(f"Error en VAD callback: {e}")
+                    # Si falla, limpiamos buffer para evitar loop infinito
+                    buffer = np.array([], dtype=np.float32)
+
+        try:
+            self.recorder.start(chunk_callback=vad_callback)
+            logger.info("Smart capture iniciado (esperando voz...)")
+
+            # Esperar a que termine
+            # Implementar timeout general
+            start_time = time.time()
+            while not stop_event.is_set():
+                if time.time() - start_time > timeout and not speech_started:
+                    logger.info("Timeout esperando voz")
+                    break
+                if time.time() - start_time > 60: # Hard limit 60s
+                    logger.info("Hard limit alcanzado")
+                    break
+                time.sleep(0.1)
+
+            return self.stop_and_transcribe()
+
+        except Exception as e:
+            logger.error(f"Error en smart capture: {e}")
+            if self.recorder._recording:
+                self.recorder.stop()
+            raise e

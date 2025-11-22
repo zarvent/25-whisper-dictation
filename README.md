@@ -1,68 +1,79 @@
-# 🗣️ HERRAMIENTA DE DICTADO POR VOZ
+# V2M ONYX EDITION
 
-_una herramienta de dictado por voz para transcribir audio en cualquier campo de texto del sistema operativo_
+Voice-to-Machine transcription system con **Arquitectura Hexagonal** y **Ghost Core UI**.
 
----
+## Características / FEATURES
 
-### 📚 DOCUMENTACIÓN COMPLETA
+- **JSON-RPC 2.0**: Protocolo robusto sobre Unix Socket.
+- **Smart Batching (VAD)**: Detección inteligente de voz con Silero VAD.
+- **Independence Switch**: Modo offline sin LLM.
+- **Ghost Bar UI**: Interfaz minimalista en PySide6 + QML.
+- **Auto-Reconnection**: SDK con retry automático.
 
-> **toda la documentación detallada se encuentra en la carpeta `/docs`**
->
-> explora la guía de instalación la arquitectura y más navegando en esa carpeta
+## Instalación / INSTALLATION
 
----
-
-## 🎯 PROPÓSITO
-
-el objetivo es simple
-
-> poder dictar texto en cualquier lugar del sistema operativo
-
-la idea es transcribir audio con una GPU para máxima velocidad sin importar la aplicación que estés usando
-
-este proyecto es una refactorización de un script simple a una aplicación modular en PYTHON para separar responsabilidades y facilitar el mantenimiento a futuro
-
----
-
-## 🕹️ FLUJO DE TRABAJO
-
-la interacción tiene dos funciones principales activadas por atajos de teclado globales para no interrumpir tu trabajo
-
-#### 1. FLUJO DE DICTADO (VOZ → TEXTO)
-
-este es el flujo principal para capturar tu voz y convertirla en texto se activa con `scripts/whisper-toggle.sh`
-
-```mermaid
-%%{init: {"flowchart": {"htmlLabels": false}} }%%
-flowchart TD
-    subgraph VOZ A TEXTO
-        A["🎤 ATAMO 1<br/>_inicia grabación_"] --> B{"transcribe con WHISPER"}
-        B --> C["📋 COPIADO<br/>_texto en portapapeles_"]
-    end
-
-    style A fill:#8EBBFF,stroke:#333,stroke-width:2px
-    style B fill:#FFD68E,stroke:#333,stroke-width:2px
-    style C fill:#A9E5BB,stroke:#333,stroke-width:2px
+```bash
+# Instalar dependencias
+pip install -r requirements.txt
 ```
 
-#### 2. FLUJO DE REFINADO (TEXTO → TEXTO MEJORADO)
+## Uso / USAGE
 
-a veces la transcripción no es perfecta este flujo toma el texto de tu portapapeles y usa un LLM para limpiarlo corregirlo o formatearlo se activa con `scripts/process-clipboard.sh`
+### Opción 1: Scripts de inicio
 
-```mermaid
-%%{init: {"flowchart": {"htmlLabels": false}} }%%
-flowchart TD
-    subgraph TEXTO A TEXTO MEJORADO
-        A["📋 COPIAS TEXTO"] --> B["🧠 ATAJO 2<br/>_inicia refinado_"]
-        B --> C{"procesa con LLM<br/>_GOOGLE GEMINI_"}
-        C --> D["📋 REEMPLAZA<br/>_texto mejorado en portapapeles_"]
-    end
+```bash
+# Terminal 1: Iniciar Daemon
+./run_daemon.sh
 
-    style A fill:#F2C2E0,stroke:#333,stroke-width:2px
-    style B fill:#8EBBFF,stroke:#333,stroke-width:2px
-    style C fill:#FFD68E,stroke:#333,stroke-width:2px
-    style D fill:#A9E5BB,stroke:#333,stroke-width:2px
+# Terminal 2: Iniciar GUI
+./run_gui.sh
 ```
----
 
-> _**nota sobre la visualización** si los diagramas de flujo no se muestran en tu editor asegúrate de tener instalada una extensión compatible con mermaid_
+### Opción 2: Manual
+
+```bash
+# Terminal 1: Daemon
+PYTHONPATH=src python -m v2m.daemon
+
+# Terminal 2: GUI
+PYTHONPATH=src python -m v2m.gui.app
+```
+
+## Arquitectura / ARCHITECTURE
+
+```
+src/v2m/
+├── core/           # RPC, CQRS, DI Container
+├── application/    # Command Handlers, Services
+├── infrastructure/ # Whisper, VAD, LLM, Audio
+├── gui/            # PySide6 + QML UI
+└── sdk.py          # Client SDK
+```
+
+## Controles GUI / GUI CONTROLS
+
+- **Click en Ghost Bar**: Iniciar/Detener grabación.
+- **Drag**: Mover ventana.
+
+## Configuración / CONFIGURATION
+
+Editar `config.toml` para ajustar:
+- Modelo Whisper (`whisper_model`)
+- VAD filters (`vad_filter`, `min_silence_duration_ms`)
+- LLM API key (`GEMINI_API_KEY` o `GOOGLE_API_KEY`)
+
+## Tests
+
+```bash
+# Test RPC Manual
+PYTHONPATH=src python tests/test_rpc_manual.py
+
+# Test SDK Reconnect
+PYTHONPATH=src python tests/test_sdk_reconnect.py
+
+# Test Bridge Integration
+PYTHONPATH=src python tests/test_bridge_integration.py
+```
+
+---
+**V2M ONYX EDITION** - Ghost Core Architecture by Zarvent

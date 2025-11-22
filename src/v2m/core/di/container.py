@@ -11,7 +11,7 @@ depende de abstracciones (interfaces)
 """
 
 from v2m.core.cqrs.command_bus import CommandBus
-from v2m.application.command_handlers import StartRecordingHandler, StopRecordingHandler, ProcessTextHandler
+from v2m.application.command_handlers import StartRecordingHandler, StopRecordingHandler, ProcessTextHandler, SmartCaptureHandler
 from v2m.infrastructure.whisper_transcription_service import WhisperTranscriptionService
 from v2m.infrastructure.gemini_llm_service import GeminiLLMService
 from v2m.infrastructure.linux_adapters import LinuxNotificationAdapter, LinuxClipboardAdapter
@@ -79,6 +79,11 @@ class Container:
             self.notification_service,
             self.clipboard_service
         )
+        self.smart_capture_handler = SmartCaptureHandler(
+            self.transcription_service,
+            self.notification_service,
+            self.clipboard_service
+        )
 
         # --- 3 instanciar y configurar el bus de comandos ---
         # el bus de comandos se convierte en el punto de acceso central para
@@ -87,6 +92,7 @@ class Container:
         self.command_bus.register(self.start_recording_handler)
         self.command_bus.register(self.stop_recording_handler)
         self.command_bus.register(self.process_text_handler)
+        self.command_bus.register(self.smart_capture_handler)
 
     def get_command_bus(self) -> CommandBus:
         """

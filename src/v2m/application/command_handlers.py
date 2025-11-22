@@ -14,7 +14,7 @@ import asyncio
 from typing import Type
 from v2m.core.cqrs.command import Command
 from v2m.core.cqrs.command_handler import CommandHandler
-from v2m.application.commands import StartRecordingCommand, StopRecordingCommand, ProcessTextCommand
+from v2m.application.commands import StartRecordingCommand, StopRecordingCommand, ProcessTextCommand, SmartCaptureCommand
 from v2m.application.transcription_service import TranscriptionService
 from v2m.application.llm_service import LLMService
 from v2m.core.interfaces import NotificationInterface, ClipboardInterface
@@ -106,11 +106,13 @@ class StopRecordingHandler(CommandHandler):
         # si la transcripción está vacía no tiene sentido copiarla
         if not transcription.strip():
             self.notification_service.notify("❌ Whisper", "No se detectó voz en el audio")
-            return
+            return ""
 
         self.clipboard_service.copy(transcription)
         preview = transcription[:80] # se muestra una vista previa para no saturar la notificación
         self.notification_service.notify(f"✅ Whisper - Copiado", f"{preview}...")
+
+        return transcription
 
     def listen_to(self) -> Type[Command]:
         """
@@ -159,12 +161,14 @@ class ProcessTextHandler(CommandHandler):
 
             self.clipboard_service.copy(refined_text)
             self.notification_service.notify("✅ Gemini - Copiado", f"{refined_text[:80]}...")
+            return refined_text
 
         except Exception as e:
             # fallback si falla el llm copiamos el texto original
             self.notification_service.notify("⚠️ Gemini Falló", "Usando texto original...")
             self.clipboard_service.copy(command.text)
             self.notification_service.notify("✅ Whisper - Copiado (Raw)", f"{command.text[:80]}...")
+            return command.text
 
     def listen_to(self) -> Type[Command]:
         """
@@ -174,3 +178,29 @@ class ProcessTextHandler(CommandHandler):
             el tipo de comando que este handler puede manejar
         """
         return ProcessTextCommand
+
+class SmartCaptureHandler(CommandHandler):
+    """
+    manejador para `SmartCaptureCommand`
+    """
+    def __init__(self, transcription_service: TranscriptionService, notification_service: NotificationInterface, clipboard_service: ClipboardInterface) -> None:
+        self.transcription_service = transcription_service
+        self.notification_service = notification_service
+        self.clipboard_service = clipboard_service
+
+    async def handle(self, command: SmartCaptureCommand) -> str:
+        self.notification_service.notify("🎤 V2M Smart", "Escuchando...")
+
+        # smart_capture es bloqueante (tiene sleeps), ejecutar en thread
+        transcription = await asyncio.to_thread(self.transcription_service.smart_capture)
+
+        if not transcription.strip():
+            self.notification_service.notify("❌ VAD", "No se detectó voz")
+            return ""
+
+        self.clipboard_service.copy(transcription)
+        self.notification_service.notify("✅ Whisper - Copiado", f"{transcription[:80]}...")
+        return transcription
+
+    def listen_to(self) -> Type[Command]:
+        return SmartCaptureCommand
