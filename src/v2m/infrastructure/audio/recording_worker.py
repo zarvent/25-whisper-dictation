@@ -12,7 +12,7 @@ from v2m.config import config
 # configurar el manejo de señales
 stop_requested = False
 
-def signal_handler(sig, frame):
+def signal_handler(_sig, _frame):
     global stop_requested
     stop_requested = True
 

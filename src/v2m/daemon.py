@@ -3,7 +3,6 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Callable, Dict
 
 from v2m.core.logging import logger
 from v2m.core.ipc_protocol import SOCKET_PATH, IPCCommand

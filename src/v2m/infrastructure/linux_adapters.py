@@ -49,77 +49,109 @@ class LinuxClipboardAdapter(ClipboardInterface):
         Estrategia: Env Vars > Loginctl > Sockets en /tmp/.X11-unix
         """
         # 1. Heredar del entorno actual (Prioridad máxima)
-        if os.environ.get("WAYLAND_DISPLAY"):
-            self._backend = "wayland"
-            self._env = {"WAYLAND_DISPLAY": os.environ["WAYLAND_DISPLAY"]}
-            return
-        if os.environ.get("DISPLAY"):
-            self._backend = "x11"
-            self._env = {"DISPLAY": os.environ["DISPLAY"]}
+        if self._try_inherit_from_environment():
             return
 
         # 2. Scavenging vía loginctl
+        if self._try_detect_via_loginctl():
+            return
+
+        # 3. FALLBACK ULTIMATE: Escanear sockets activos en /tmp/.X11-unix
+        if self._try_detect_via_socket_scan():
+            return
+
+        # 4. No se encontró ningún display gráfico
+        logger.error("CRITICAL: No graphical display found. Clipboard will not work.")
+        self._backend = "x11"
+        self._env = {}
+
+    def _try_inherit_from_environment(self) -> bool:
+        """Intenta heredar variables de entorno del proceso actual."""
+        if os.environ.get("WAYLAND_DISPLAY"):
+            self._backend = "wayland"
+            self._env = {"WAYLAND_DISPLAY": os.environ["WAYLAND_DISPLAY"]}
+            return True
+        
+        if os.environ.get("DISPLAY"):
+            self._backend = "x11"
+            self._env = {"DISPLAY": os.environ["DISPLAY"]}
+            return True
+        
+        return False
+
+    def _try_detect_via_loginctl(self) -> bool:
+        """Intenta detectar el entorno gráfico usando loginctl."""
         try:
             user = os.environ.get("USER") or subprocess.getoutput("whoami")
             cmd = f"loginctl list-sessions --no-legend | grep {user} | awk '{{print $1}}'"
             sessions = subprocess.check_output(cmd, shell=True, text=True).strip().split('\n')
 
             for session_id in sessions:
-                if not session_id: continue
+                if not session_id:
+                    continue
 
-                # Inspeccionar tipo de sesión
-                type_cmd = ["loginctl", "show-session", session_id, "-p", "Type", "--value"]
-                session_type = subprocess.check_output(type_cmd, text=True).strip()
-
-                # Extraer Display si existe, independientemente del tipo
-                display_cmd = ["loginctl", "show-session", session_id, "-p", "Display", "--value"]
-                display_val = subprocess.check_output(display_cmd, text=True).strip()
-
-                if display_val:
-                    self._backend = session_type if session_type in ["wayland"] else "x11"
-                    if session_type == "wayland":
-                         self._env = {"WAYLAND_DISPLAY": display_val}
-                    else:
-                         self._env = {"DISPLAY": display_val}
-                         # Scavenge XAUTHORITY for X11
-                         xauth_path = self._find_xauthority()
-                         if xauth_path:
-                             self._env["XAUTHORITY"] = xauth_path
-                             logger.info(f"XAUTHORITY scavenged: {xauth_path}")
-
-                    logger.info(f"Environment detected via loginctl: Session {session_id} ({session_type}) -> {display_val}")
-                    return
+                if self._try_configure_from_session(session_id):
+                    return True
 
         except Exception as e:
             logger.warning(f"Environment scavenging failed: {e}")
 
-        # 3. FALLBACK ULTIMATE: Escanear sockets activos en /tmp/.X11-unix
-        # Esto encuentra :0, :1, :2 lo que sea que esté vivo.
+        return False
+
+    def _try_configure_from_session(self, session_id: str) -> bool:
+        """Configura el entorno desde una sesión loginctl específica."""
+        try:
+            type_cmd = ["loginctl", "show-session", session_id, "-p", "Type", "--value"]
+            session_type = subprocess.check_output(type_cmd, text=True).strip()
+
+            display_cmd = ["loginctl", "show-session", session_id, "-p", "Display", "--value"]
+            display_val = subprocess.check_output(display_cmd, text=True).strip()
+
+            if not display_val:
+                return False
+
+            self._backend = "wayland" if session_type == "wayland" else "x11"
+            
+            if session_type == "wayland":
+                self._env = {"WAYLAND_DISPLAY": display_val}
+            else:
+                self._env = {"DISPLAY": display_val}
+                xauth_path = self._find_xauthority()
+                if xauth_path:
+                    self._env["XAUTHORITY"] = xauth_path
+                    logger.info(f"XAUTHORITY scavenged: {xauth_path}")
+
+            logger.info(f"Environment detected via loginctl: Session {session_id} ({session_type}) -> {display_val}")
+            return True
+
+        except Exception:
+            return False
+
+    def _try_detect_via_socket_scan(self) -> bool:
+        """Intenta detectar X11 escaneando sockets en /tmp/.X11-unix."""
         try:
             x11_socket_dir = Path("/tmp/.X11-unix")
-            if x11_socket_dir.exists():
-                # Buscar sockets que empiecen por X (ej: X0, X1)
-                sockets = sorted([s.name for s in x11_socket_dir.iterdir() if s.name.startswith("X")])
-                if sockets:
-                    # Tomar el primero (o el último modificado si quisieras ser más fino)
-                    # X1 -> :1
-                    active_display = f":{sockets[0][1:]}"
-                    self._backend = "x11"
-                    self._env = {"DISPLAY": active_display}
-                    logger.info(f"Display detected via socket scan: {active_display}")
+            if not x11_socket_dir.exists():
+                return False
 
-                    # Intentar inyectar XAUTHORITY si falta
-                    xauth = self._find_xauthority()
-                    if xauth:
-                        self._env["XAUTHORITY"] = xauth
-                    return
+            sockets = sorted([s.name for s in x11_socket_dir.iterdir() if s.name.startswith("X")])
+            if not sockets:
+                return False
+
+            active_display = f":{sockets[0][1:]}"
+            self._backend = "x11"
+            self._env = {"DISPLAY": active_display}
+            logger.info(f"Display detected via socket scan: {active_display}")
+
+            xauth = self._find_xauthority()
+            if xauth:
+                self._env["XAUTHORITY"] = xauth
+            
+            return True
+
         except Exception as e:
             logger.warning(f"Socket scan failed: {e}")
-
-        logger.error("CRITICAL: No graphical display found. Clipboard will not work.")
-        self._backend = "x11"
-        # No definimos DISPLAY, dejamos que xclip intente su default (que es :0)
-        self._env = {}
+            return False
 
     def _get_clipboard_commands(self) -> Tuple[list, list]:
         """

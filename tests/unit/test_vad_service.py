@@ -5,14 +5,14 @@ from v2m.infrastructure.vad_service import VADService
 
 @pytest.fixture
 def vad_service():
-    return VADService()
+    service = VADService()
+    # Properly mock the model as loaded
+    service.model = MagicMock()
+    service.disabled = False
+    return service
 
 def test_vad_process_empty_audio(vad_service):
     """Test processing empty audio returns empty array."""
-    # Mock load_model to avoid downloading/loading real model
-    vad_service.load_model = MagicMock()
-    vad_service.get_speech_timestamps = MagicMock(return_value=[])
-
     empty_audio = np.array([], dtype=np.float32)
     result = vad_service.process(empty_audio)
 
@@ -20,7 +20,7 @@ def test_vad_process_empty_audio(vad_service):
 
 def test_vad_process_no_speech(vad_service):
     """Test processing audio with no speech returns empty array."""
-    vad_service.load_model = MagicMock()
+    # Mock get_speech_timestamps to return no speech segments
     vad_service.get_speech_timestamps = MagicMock(return_value=[])
 
     # 1 second of silence
@@ -31,7 +31,6 @@ def test_vad_process_no_speech(vad_service):
 
 def test_vad_process_with_speech(vad_service):
     """Test processing audio with speech returns concatenated segments."""
-    vad_service.load_model = MagicMock()
     # Mock timestamps: speech from 1000-2000 and 3000-4000
     vad_service.get_speech_timestamps = MagicMock(return_value=[
         {'start': 1000, 'end': 2000},
@@ -48,3 +47,27 @@ def test_vad_process_with_speech(vad_service):
     # Verify content
     expected = np.concatenate([audio[1000:2000], audio[3000:4000]])
     np.testing.assert_array_equal(result, expected)
+
+def test_vad_disabled_returns_original_audio():
+    """Test that disabled VAD returns original audio unchanged."""
+    service = VADService()
+    service.disabled = True
+    
+    audio = np.arange(1000, dtype=np.float32)
+    result = service.process(audio)
+    
+    np.testing.assert_array_equal(result, audio)
+
+def test_vad_model_not_loaded_returns_original_audio():
+    """Test that VAD without loaded model returns original audio."""
+    service = VADService()
+    service.model = None
+    service.disabled = False
+    
+    # Mock load_model to fail
+    with patch.object(service, 'load_model', side_effect=Exception("Model load failed")):
+        audio = np.arange(1000, dtype=np.float32)
+        result = service.process(audio)
+        
+        # Should return original audio as fallback
+        np.testing.assert_array_equal(result, audio)
