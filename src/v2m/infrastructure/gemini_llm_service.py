@@ -35,9 +35,13 @@ class GeminiLLMService(LLMService):
         raises:
             llmerror: si la `GEMINI_API_KEY` no se encuentra en la configuración
         """
+        # Cargar .env explícitamente primero
+        load_dotenv()
+
         # --- carga de configuración y secretos ---
         gemini_config = config.gemini
-        api_key = gemini_config.api_key
+        # Fallback a os.getenv si pydantic no carga
+        api_key = gemini_config.api_key or os.getenv("GEMINI_API_KEY")
 
         if not api_key:
             raise LLMError("la variable de entorno GEMINI_API_KEY no fue encontrada")

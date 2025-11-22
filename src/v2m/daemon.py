@@ -34,6 +34,7 @@ class Daemon:
             "start_capture": self.start_capture,
             "stop_capture": self.stop_capture,
             "transcribe": self.transcribe,
+            "process_text": self.process_text_rpc,
             "get_status": self.get_status,
             "shutdown": self.shutdown_rpc
         }
@@ -117,12 +118,15 @@ class Daemon:
         text = await self.command_bus.dispatch(StopRecordingCommand())
         return {"text": text}
 
-    async def transcribe(self, use_llm: bool = True):
+    async def transcribe(self, use_llm: bool = False):
         """
         orquesta el flujo completo de transcripción
         1 intenta detener una grabación en curso
         2 si no hay grabación inicia una captura inteligente (smart batching)
         3 opcionalmente procesa el texto con un LLM
+
+        args:
+            use_llm: si True, procesa el texto con Gemini (default False para eficiencia)
         """
         # Check if recording is active by trying to stop it
         try:
@@ -141,6 +145,30 @@ class Daemon:
             return {"text": refined_text, "original": text}
 
         return {"text": text}
+
+    async def process_text_rpc(self, text: str):
+        """
+        procesa texto arbitrario (ej desde portapapeles) con el LLM
+
+        este método permite refinar texto sin necesidad de grabación de audio
+        útil para procesar contenido del clipboard con gemini
+
+        args:
+            text: el texto a procesar con gemini
+
+        returns:
+            dict con 'text' refinado y 'original'
+        """
+        if not text or not text.strip():
+            return {"error": "No text provided"}
+
+        try:
+            refined_text = await self.command_bus.dispatch(ProcessTextCommand(text))
+            return {"text": refined_text, "original": text}
+        except Exception as e:
+            logger.error(f"Error en process_text_rpc: {e}")
+            # En caso de error, retornar el texto original
+            return {"text": text, "original": text, "error": str(e)}
 
     async def get_status(self):
         """retorna el estado actual del daemon (mock)"""

@@ -202,6 +202,10 @@ class WhisperTranscriptionService(TranscriptionService):
         def vad_callback(chunk: np.ndarray):
             nonlocal speech_started, buffer
 
+            # Aplanar chunk a 1D si es necesario (sounddevice pasa 2D)
+            if chunk.ndim > 1:
+                chunk = chunk.flatten()
+
             # Acumular buffer
             buffer = np.concatenate((buffer, chunk))
 

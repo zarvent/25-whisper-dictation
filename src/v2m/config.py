@@ -53,7 +53,7 @@ class WhisperConfig(BaseModel):
 
 class GeminiConfig(BaseModel):
     """configuración para el modelo de lenguaje grande (LLM) gemini"""
-    model: str = "models/gemini-1.5-flash-latest"
+    model: str = "gemini-2.0-flash-exp"
     temperature: float = 0.3
     max_tokens: int = 2048
     max_input_chars: int = 6000

@@ -165,9 +165,9 @@ class ProcessTextHandler(CommandHandler):
 
         except Exception as e:
             # fallback si falla el llm copiamos el texto original
-            self.notification_service.notify("⚠️ Gemini Falló", "Usando texto original...")
+            logger.warning(f"LLM falló, usando texto original: {e}")
             self.clipboard_service.copy(command.text)
-            self.notification_service.notify("✅ Whisper - Copiado (Raw)", f"{command.text[:80]}...")
+            self.notification_service.notify("⚠️ Gemini Falló - Copiado (Raw)", f"{command.text[:80]}...")
             return command.text
 
     def listen_to(self) -> Type[Command]:
