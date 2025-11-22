@@ -10,7 +10,6 @@ from v2m.application.llm_service import LLMService
 from v2m.config import config, BASE_DIR
 from google import genai
 import os
-from dotenv import load_dotenv
 from pathlib import Path
 from tenacity import retry, stop_after_attempt, wait_exponential
 from v2m.domain.errors import LLMError

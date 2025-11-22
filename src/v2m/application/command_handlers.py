@@ -161,6 +161,11 @@ class ProcessTextHandler(CommandHandler):
             self.notification_service.notify("✅ Gemini - Copiado", f"{refined_text[:80]}...")
 
         except Exception as e:
+            # AXIOMA III: El Error es Información, el Silencio es Cáncer
+            # Loguear el error completo antes del fallback
+            from v2m.core.logging import logger
+            logger.error(f"Error procesando texto con LLM: {e}", exc_info=True)
+            
             # fallback si falla el llm copiamos el texto original
             self.notification_service.notify("⚠️ Gemini Falló", "Usando texto original...")
             self.clipboard_service.copy(command.text)
