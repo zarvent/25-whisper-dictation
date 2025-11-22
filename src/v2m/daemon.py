@@ -11,6 +11,20 @@ from v2m.core.di.container import container
 from v2m.application.commands import StartRecordingCommand, StopRecordingCommand, ProcessTextCommand, SmartCaptureCommand
 
 class Daemon:
+    """
+    daemon principal del sistema v2m gestiona las conexiones rpc y orquesta los comandos
+
+    responsabilidades
+    - iniciar y detener el servidor rpc sobre unix socket
+    - recibir mensajes json-rpc parsearlos y despacharlos
+    - mantener el ciclo de vida de la aplicación
+
+    atributos
+    - running (bool): estado de ejecución del daemon
+    - socket_path (path): ruta al archivo del socket unix
+    - command_bus: bus de comandos para enviar acciones a la capa de aplicación
+    - methods (dict): mapa de nombres de métodos rpc a funciones del daemon
+    """
     def __init__(self):
         self.running = False
         self.socket_path = Path(SOCKET_PATH)
@@ -25,6 +39,12 @@ class Daemon:
         }
 
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        """
+        maneja una conexión entrante de un cliente rpc
+
+        lee los datos del socket los decodifica y procesa la petición rpc
+        finalmente envía la respuesta de vuelta y cierra la conexión
+        """
         try:
             data = await reader.read(4096)
             if not data:
@@ -51,6 +71,12 @@ class Daemon:
             # await writer.wait_closed() # Sometimes causes issues if already closed
 
     async def dispatch(self, request: JsonRpcRequest) -> JsonRpcResponse:
+        """
+        enruta la petición rpc al método correspondiente
+
+        verifica si el método existe en `self.methods` y lo ejecuta con los parámetros provistos
+        retorna una respuesta rpc exitosa o de error
+        """
         if request.method not in self.methods:
             return create_error_response(request.id, -32601, "Method not found")
 
@@ -74,18 +100,30 @@ class Daemon:
     # --- RPC Methods ---
 
     async def ping(self):
+        """responde con 'pong' para verificar conectividad"""
         return "pong"
 
     async def start_capture(self):
+        """inicia el proceso de grabación de audio enviando un comando al bus"""
         await self.command_bus.dispatch(StartRecordingCommand())
         return "started"
 
     async def stop_capture(self):
+        """
+        detiene la grabación y retorna el texto transcrito
+        el comando stoprecordingcommand ahora retorna el resultado de la transcripción
+        """
         # StopRecordingCommand now returns the transcription text
         text = await self.command_bus.dispatch(StopRecordingCommand())
         return {"text": text}
 
     async def transcribe(self, use_llm: bool = True):
+        """
+        orquesta el flujo completo de transcripción
+        1 intenta detener una grabación en curso
+        2 si no hay grabación inicia una captura inteligente (smart batching)
+        3 opcionalmente procesa el texto con un LLM
+        """
         # Check if recording is active by trying to stop it
         try:
             text = await self.command_bus.dispatch(StopRecordingCommand())
@@ -105,21 +143,28 @@ class Daemon:
         return {"text": text}
 
     async def get_status(self):
+        """retorna el estado actual del daemon (mock)"""
         # TODO: Implement real status check
         return {"running": True, "recording": False} # Mock for now
 
     async def shutdown_rpc(self):
+        """inicia el apagado controlado del daemon"""
         self.running = False
         asyncio.create_task(self.stop_later())
         return "shutting_down"
 
     async def stop_later(self):
+        """helper para detener el daemon después de un breve delay permitiendo enviar la respuesta rpc"""
         await asyncio.sleep(0.1)
         self.stop()
 
     # --- Server Lifecycle ---
 
     async def start_server(self):
+        """
+        inicializa el servidor unix socket
+        verifica si el socket ya existe (daemon corriendo) y maneja la limpieza si es un socket huérfano
+        """
         if self.socket_path.exists():
             try:
                 reader, writer = await asyncio.open_unix_connection(str(self.socket_path))
@@ -138,12 +183,14 @@ class Daemon:
             await server.serve_forever()
 
     def stop(self):
+        """detiene el daemon y limpia el archivo del socket"""
         logger.info("Stopping daemon...")
         if self.socket_path.exists():
             self.socket_path.unlink()
         sys.exit(0)
 
     def run(self):
+        """punto de entrada para ejecutar el daemon maneja el loop de eventos y señales"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 

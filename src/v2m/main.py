@@ -1,15 +1,15 @@
 """
 punto de entrada principal para la aplicación de dictado por voz
 
-este script ahora actúa como un lanzador unificado puede iniciar el demonio (servidor)
-o actuar como un cliente que envía comandos al demonio a través de IPC
+este script actúa como un lanzador unificado puede iniciar el daemon (servidor)
+o actuar como un cliente que envía comandos al daemon a través de ipc
 
 modos de operación
 1.  daemon `python -m v2m.main --daemon`
     inicia el proceso persistente que carga el modelo en memoria y escucha comandos
 
 2.  client `python -m v2m.main <COMMAND>`
-    envía un comando (START_RECORDING STOP_RECORDING etc) al demonio en ejecución
+    envía un comando (start_recording stop_recording etc) al daemon en ejecución
 """
 import argparse
 import asyncio
@@ -20,6 +20,7 @@ from v2m.core.ipc_protocol import IPCCommand
 from v2m.core.logging import logger
 
 def main() -> None:
+    """función principal que parsea argumentos y decide si ejecutar como daemon o cliente"""
     parser = argparse.ArgumentParser(description="Whisper Dictation Main Entrypoint")
 
     # argumento para iniciar como demonio

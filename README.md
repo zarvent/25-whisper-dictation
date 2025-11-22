@@ -1,79 +1,80 @@
 # V2M ONYX EDITION
 
-Voice-to-Machine transcription system con **Arquitectura Hexagonal** y **Ghost Core UI**.
+voice-to-machine transcription system con **arquitectura hexagonal** y **ghost core ui**
 
-## Características / FEATURES
+## características
 
-- **JSON-RPC 2.0**: Protocolo robusto sobre Unix Socket.
-- **Smart Batching (VAD)**: Detección inteligente de voz con Silero VAD.
-- **Independence Switch**: Modo offline sin LLM.
-- **Ghost Bar UI**: Interfaz minimalista en PySide6 + QML.
-- **Auto-Reconnection**: SDK con retry automático.
+*   **JSON-RPC 2.0** protocolo robusto sobre unix socket
+*   **smart batching (VAD)** detección inteligente de voz con silero vad
+*   **independence switch** modo offline sin LLM
+*   **ghost bar ui** interfaz minimalista en pyside6 + qml
+*   **auto-reconnection** sdk con retry automático
 
-## Instalación / INSTALLATION
+## instalación
 
 ```bash
-# Instalar dependencias
+# instalar dependencias
 pip install -r requirements.txt
 ```
 
-## Uso / USAGE
+## uso
 
-### Opción 1: Scripts de inicio
+### opción 1 scripts de inicio
 
 ```bash
-# Terminal 1: Iniciar Daemon
+# terminal 1 iniciar daemon
 ./run_daemon.sh
 
-# Terminal 2: Iniciar GUI
+# terminal 2 iniciar gui
 ./run_gui.sh
 ```
 
-### Opción 2: Manual
+### opción 2 manual
 
 ```bash
-# Terminal 1: Daemon
+# terminal 1 daemon
 PYTHONPATH=src python -m v2m.daemon
 
-# Terminal 2: GUI
+# terminal 2 gui
 PYTHONPATH=src python -m v2m.gui.app
 ```
 
-## Arquitectura / ARCHITECTURE
+## arquitectura
 
 ```
 src/v2m/
-├── core/           # RPC, CQRS, DI Container
-├── application/    # Command Handlers, Services
-├── infrastructure/ # Whisper, VAD, LLM, Audio
-├── gui/            # PySide6 + QML UI
-└── sdk.py          # Client SDK
+├── core/           # RPC, CQRS, DI container
+├── application/    # command handlers, services
+├── infrastructure/ # whisper, vad, LLM, audio
+├── gui/            # pyside6 + qml ui
+└── sdk.py          # client sdk
 ```
 
-## Controles GUI / GUI CONTROLS
+## controles gui
 
-- **Click en Ghost Bar**: Iniciar/Detener grabación.
-- **Drag**: Mover ventana.
+*   **click en ghost bar** iniciar o detener grabación
+*   **drag** mover ventana
 
-## Configuración / CONFIGURATION
+## configuración
 
-Editar `config.toml` para ajustar:
-- Modelo Whisper (`whisper_model`)
-- VAD filters (`vad_filter`, `min_silence_duration_ms`)
-- LLM API key (`GEMINI_API_KEY` o `GOOGLE_API_KEY`)
+editar `config.toml` para ajustar
 
-## Tests
+*   modelo whisper `whisper_model`
+*   vad filters `vad_filter` `min_silence_duration_ms`
+*   LLM API key `GEMINI_API_KEY` o `GOOGLE_API_KEY`
+
+## tests
 
 ```bash
-# Test RPC Manual
+# test RPC manual
 PYTHONPATH=src python tests/test_rpc_manual.py
 
-# Test SDK Reconnect
+# test sdk reconnect
 PYTHONPATH=src python tests/test_sdk_reconnect.py
 
-# Test Bridge Integration
+# test bridge integration
 PYTHONPATH=src python tests/test_bridge_integration.py
 ```
 
 ---
-**V2M ONYX EDITION** - Ghost Core Architecture by Zarvent
+**V2M ONYX EDITION** ghost core architecture por zarvent
