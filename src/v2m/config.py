@@ -16,6 +16,7 @@ from pydantic_settings import (
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 class PathsConfig(BaseModel):
+    """configuración de rutas del sistema de archivos"""
     recording_flag: Path = Field(default=Path("/tmp/v2m_recording.pid"))
     audio_file: Path = Field(default=Path("/tmp/v2m_audio.wav"))
     log_file: Path = Field(default=Path("/tmp/v2m_debug.log"))
@@ -25,6 +26,7 @@ class PathsConfig(BaseModel):
         return getattr(self, item)
 
 class VadParametersConfig(BaseModel):
+    """parámetros para la detección de actividad de voz (vad)"""
     threshold: float = 0.5
     min_speech_duration_ms: int = 250
     min_silence_duration_ms: int = 500
@@ -33,6 +35,7 @@ class VadParametersConfig(BaseModel):
         return getattr(self, item)
 
 class WhisperConfig(BaseModel):
+    """configuración del modelo de transcripción whisper"""
     model: str = "large-v2"
     language: str = "es"
     device: str = "cuda"
@@ -49,6 +52,7 @@ class WhisperConfig(BaseModel):
         return getattr(self, item)
 
 class GeminiConfig(BaseModel):
+    """configuración para el modelo de lenguaje grande (LLM) gemini"""
     model: str = "models/gemini-1.5-flash-latest"
     temperature: float = 0.3
     max_tokens: int = 2048
@@ -63,6 +67,10 @@ class GeminiConfig(BaseModel):
         return getattr(self, item)
 
 class Settings(BaseSettings):
+    """
+    clase principal de configuración que agrupa todas las secciones
+    carga valores de variables de entorno archivo .env y config.toml
+    """
     paths: PathsConfig = Field(default_factory=PathsConfig)
     whisper: WhisperConfig = Field(default_factory=WhisperConfig)
     gemini: GeminiConfig = Field(default_factory=GeminiConfig)
@@ -83,6 +91,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        """permite cargar configuración desde archivo toml"""
         return (
             init_settings,
             env_settings,
