@@ -3,11 +3,10 @@ Tests de resiliencia para los command handlers según el V2M QA Manifesto.
 Tests de "No Happy Path" - Por cada test de éxito, al menos 2 de fallo.
 """
 import pytest
-import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 from v2m.application.command_handlers import StartRecordingHandler, StopRecordingHandler, ProcessTextHandler
 from v2m.application.commands import StartRecordingCommand, StopRecordingCommand, ProcessTextCommand
-from v2m.domain.errors import RecordingError, LLMError
+from v2m.domain.errors import RecordingError, LLMError, MicrophoneNotFoundError
 
 
 @pytest.fixture
@@ -59,7 +58,6 @@ class TestStartRecordingHandler:
     @pytest.mark.asyncio
     async def test_start_recording_microphone_not_found(self, mock_transcription_service, mock_notification_service):
         """Edge Case: micrófono no disponible."""
-        from v2m.domain.errors import MicrophoneNotFoundError
         mock_transcription_service.start_recording.side_effect = MicrophoneNotFoundError("No se detectó micrófono")
         handler = StartRecordingHandler(mock_transcription_service, mock_notification_service)
         
