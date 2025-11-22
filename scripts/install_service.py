@@ -57,6 +57,14 @@ def install_service():
     current_dir = Path.cwd().resolve()
     venv_python = current_dir / "venv/bin/python"
 
+    # 2.1 Validar entornos virtuales duplicados
+    venv_duplicate = current_dir / ".venv"
+    if venv_duplicate.exists() and (current_dir / "venv").exists():
+        print("❌ ERROR: Detectados dos entornos virtuales (.venv y venv)")
+        print("   Esto puede causar consumo excesivo de disco (~10GB)")
+        print(f"   Ejecuta: python3 scripts/cleanup.py --fix-venv")
+        sys.exit(1)
+
     # 3. Calcular LD_LIBRARY_PATH
     cuda_path = get_cuda_paths(venv_python)
     env_vars = f"Environment=PYTHONPATH={current_dir}/src\n"
